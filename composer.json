@@ -1,0 +1,39 @@
+{
+	"name": "crackerjackdigital/silverstripe-modular-mappable",
+	"type": "silverstripe-module",
+	"description": "Delimited path based mapping from data (e.g. JSON) to model fields and relationships",
+	"homepage": "http://github.com/crackerjackdigital",
+	"license": "BSD-3-Clause",
+	"keywords": [
+		"silverstripe"
+	],
+	"authors": [
+		{
+			"name": "Steve Wake",
+			"homepage": "https://github.com/wakes"
+		},
+		{
+			"name": "CrackerJack Digital",
+			"homepage": "http://www.crackerjack.net.nz/"
+		}
+	],
+	"require": {
+		"silverstripe/framework": ">=3.1",
+		"crackerjackdigital/silverstripe-modular": "*",
+		"crackerjackdigital/silverstripe-modular-types": "*"
+	},
+	"repositories": [
+		{
+			"type": "vcs",
+			"url": "https://github.com/CrackerjackDigital/silverstripe-modular.git"
+		},
+		{
+			"type": "vcs",
+			"url": "https://github.com/CrackerjackDigital/silverstripe-modular-types.git"
+		}
+	],
+	"extra": {
+		"installer-name": "modular-mappable"
+	},
+	"minimum-stability": "dev"
+}
