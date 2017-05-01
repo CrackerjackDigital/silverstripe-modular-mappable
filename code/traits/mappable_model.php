@@ -18,7 +18,7 @@ trait mappable_model {
 	 * @return array
 	 * @throws Exception
 	 */
-	public function mappableMapForSource( $sourceName, $options = self::MapDeep ) {
+	public function mappableMapForSource( $sourceName, $options = MappableInterface::MapDeep ) {
 		$model = $this->model();
 
 		$maps = $model->config()->get( 'mappable_map' ) ?: [];

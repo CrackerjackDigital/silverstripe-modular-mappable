@@ -16,12 +16,13 @@ interface Mappable {
 
 	const OptionSkipNulls                   = 256;          // update missing api values to null
 	const OptionShallow                     = 512;            // don't import relationships if set
-	const OptionSkipTagFields               = 1024;      // don't import/decode tag fields
+	const OptionSkipRelationships           = 1024;      // don't import/decode tag fields
 	const OptionRemoveObsoleteRelationships = 2048;    // remove relationships
 	const OptionClearOneToMany              = 4096;
 	const OptionDeleteOneToMany             = 8192;  // delete implies clear so 32 | 16
+	const OptionCreateRelatedModels         = 16384;
 
-	const DefaultMappableOptions = self::DecodeNone | self::MapDeep | self::OptionDeleteOneToMany;
+	const DefaultMappableOptions = self::DecodeNone | self::MapDeep | self::OptionDeleteOneToMany | self::OptionCreateRelatedModels;
 
 	const DefaultMapMethodPrefix = 'mappable';
 

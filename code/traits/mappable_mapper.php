@@ -12,7 +12,7 @@ trait mappable_mapper {
 	private $sourceName;
 
 	/**
-	 * @param int $bitfield with some bits set
+	 * @param int $bitfield   with some bits set
 	 * @param int $bitsToTest check these bits are 1 in the bitfield
 	 *
 	 * @return bool true if all bits set in bitsToTest are set in bitfield
@@ -29,22 +29,22 @@ trait mappable_mapper {
 	 *
 	 * @return
 	 */
-	abstract public function traverse( $path, array $data, &$found = false);
+	abstract public function traverse( $path, array $data, &$found = false );
 
 	/**
 	 * Given data in a nested array, a field map to a flat structure and a DataObject to set field values
 	 * on populate the model.
 	 *
 	 * @param
-	 * @param array|string             $data
 	 * @param string|MappableInterface $sourceName source to get map from config.mappable_map for the model
+	 * @param array|string             $data
 	 * @param int                      $options    bitfield of or'd self::OptionXYZ flags
 	 *
 	 * @return int - number of fields found for mapping
 	 * @throws \ValidationException
 	 * @throws null
 	 */
-	public function mappableUpdate( array $data, $sourceName, $options = MappableInterface::DefaultMappableOptions ) {
+	public function mappableUpdate( $sourceName, array $data, $options = MappableInterface::DefaultMappableOptions ) {
 		$model = $this->model();
 
 		if ( ! $map = $model->mappableMapForSource( $sourceName ) ) {
@@ -88,7 +88,7 @@ trait mappable_mapper {
 		/** $var \DataObject|MappableInterface $model */
 		$model = $this->model();
 
-		list( , $modelPath, , $isTagField, $method, $relationship ) = $fieldInfo;
+		list( , $modelPath, , $isTagField, $method, $relationshipName ) = $fieldInfo;
 
 		$delimiter = static::path_delimiter();
 
@@ -104,18 +104,47 @@ trait mappable_mapper {
 		}
 
 		if ( is_array( $value ) ) {
-			$relationshipName = $modelPath;
-
-			if ( $isTagField && ! self::testbits( $options, MappableInterface::OptionSkipTagFields ) ) {
+			if ( $isTagField && ! self::testbits( $options, MappableInterface::OptionSkipRelationships ) ) {
+				$relationshipName = $modelPath;
 
 				// setter should map through to a set<RelationshipName> method on the Quaff extension
-				if ( $model->hasMethod( "set$relationshipName" ) ) {
-					$model->$relationshipName = $value;
+				if ( $model->hasMethod( $setter = "set$relationshipName" ) ) {
+					$model->$setter( $value );
+				} elseif ( $model->hasMethod( $method ) ) {
+					$model->$method( $value );
+				} else {
+					// add foreign keys ('Tags') creating the foreign record if necessary and options say so
+
+					$foreignClass = $model->hasManyComponent( $relationshipName )
+						?: $model->manyManyComponent( $relationshipName );
+
+					if ( $foreignClass ) {
+						foreach ( $value as $foreignKey ) {
+							$foreignKeyField = $fieldInfo[1];
+
+							$related = $foreignClass::get()->Filter( [
+								$foreignKeyField => $foreignKey,
+							] );
+							if ( ! $related && self::testbits( $options, MappableInterface::OptionCreateRelatedModels) ) {
+								$related = new $foreignClass( [
+									$foreignKeyField => $foreignKey,
+								] );
+							}
+							if ( $related ) {
+								$model->$relationshipName()->add( $related );
+							}
+						}
+					} elseif ( $model->hasField( $modelPath ) ) {
+
+						// we have multiple values but no relationship, just set the value to
+						// imploded values
+						$model->$modelPath = implode( ',', $value );
+					}
 				}
 
 			} elseif ( ! self::testbits( $options, MappableInterface::OptionShallow ) ) {
 
-				if ( $relatedClass = $model->hasMany( $relationshipName ) ) {
+				if ( $relatedClass = $model->hasManyComponent( $relationshipName ) ) {
 					// add has_many related objects as new objects
 
 					if ( $this->testbits( $options, MappableInterface::OptionDeleteOneToMany ) ) {
@@ -146,8 +175,8 @@ trait mappable_mapper {
 			}
 		} else {
 			// handle one-to-one relationship with a lookup field (could be the id or another field, e.g a 'Code' field).
-			if ( $relationship ) {
-				list( $relationshipName, $lookupFieldName ) = explode( $delimiter, $relationship );
+			if ( $relationshipName ) {
+				list( $relationshipName, $lookupFieldName ) = explode( $delimiter, $relationshipName );
 
 				if ( $relatedClass = $model->hasOne( $relationshipName ) ) {
 					/** @var DataObject $relatedModel */
