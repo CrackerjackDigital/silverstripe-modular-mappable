@@ -31,6 +31,11 @@ interface Mappable {
 
 	const DefaultTagDelimiter = '|';
 
+	// prefix to use on models and extensions to defined a method which will be called
+	// if it exists with the corresponding destination field or relationship
+	// e.g. 'mapTitle' will be called with the raw data if it exists instead of directly setting Title on the model
+	const CustomMapMethodPrefix = 'map';
+
 	/**
 	 * From DataObject but we use it so declare it
 	 *

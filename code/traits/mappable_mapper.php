@@ -5,6 +5,7 @@ namespace Modular\Traits;
 use DataObject;
 use Modular\Exceptions\Mappable as Exception;
 use Modular\Interfaces\Mappable as MappableInterface;
+use Modular\Interfaces\Mappable;
 use ValidationException;
 
 trait mappable_mapper {
@@ -26,7 +27,7 @@ trait mappable_mapper {
 	 * @param string $path  delimited path in data to traverse, e.g. 'item.contents.chunks[1]'
 	 * @param array  $data
 	 * @param bool   $found set to true path was found in data, otherwise false
-	 *
+	 *za
 	 * @return
 	 */
 	abstract public function traverse( $path, array $data, &$found = false );
@@ -35,7 +36,6 @@ trait mappable_mapper {
 	 * Given data in a nested array, a field map to a flat structure and a DataObject to set field values
 	 * on populate the model.
 	 *
-	 * @param
 	 * @param string|MappableInterface $sourceName source to get map from config.mappable_map for the model
 	 * @param array|string             $data
 	 * @param int                      $options    bitfield of or'd self::OptionXYZ flags
@@ -76,13 +76,13 @@ trait mappable_mapper {
 	/**
 	 * A value was found so map it to the DataObject.
 	 *
-	 * @param                              $value
-	 * @param                              $fieldInfo
-	 * @param  int                         $options bitfield of or'd self::OptionXYZ flags
+	 * @param  mixed $value
+	 * @param  array $fieldInfo
+	 * @param  int   $options bitfield of or'd self::OptionXYZ flags
 	 *
+	 * @return bool|null
 	 * @throws Exception
 	 * @throws ValidationException
-	 * @throws null
 	 */
 	protected function found( $value, $fieldInfo, $options = MappableInterface::DefaultMappableOptions ) {
 		/** $var \DataObject|MappableInterface $model */
@@ -90,132 +90,165 @@ trait mappable_mapper {
 
 		list( , $modelPath, , $isTagField, $method, $relationshipName ) = $fieldInfo;
 
-		$delimiter = static::path_delimiter();
+		$result = null;
 
 		if ( $method ) {
-			if ( $model->hasMethod( $method ) ) {
-				$internallyHandled = false;
-				// TODO figure out why can't pass internallyHandled by reference
-				$value = $model->$method( $value, $fieldInfo );
-				if ( $internallyHandled ) {
-					return;
-				}
-			}
-		}
 
-		if ( is_array( $value ) ) {
-			// map array to relationships or single field
-			if ( $isTagField && ! self::testbits( $options, MappableInterface::OptionSkipRelationships ) ) {
-				$relationshipName = $modelPath;
+			$this->mapMethod( $method, $value, $model, $fieldInfo, $options, $result );
 
-				// setter should map through to a set<RelationshipName> method on the Quaff extension
-				if ( $model->hasMethod( $setter = "map$relationshipName" ) ) {
-					$model->$setter( $value );
-				} elseif ( $model->hasMethod( $method ) ) {
-					$model->$method( $value );
-				} else {
-					// add foreign keys ('Tags') creating the foreign record if necessary and options say so
+		} elseif ( $model->hasMethod( MappableInterface::CustomMapMethodPrefix . $relationshipName ) ) {
 
-					if (!$foreignClass = $model->hasManyComponent( $relationshipName, true )) {
-						if ($manyMany = $model->manyManyComponent( $relationshipName, true )) {
-							if (isset($manyMany[1])) {
-								$foreignClass = $manyMany[1];
-							}
-						}
-					}
+			$this->mapMethod( MappableInterface::CustomMapMethodPrefix . $relationshipName, $value, $model, $fieldInfo, $options, $result );
 
-					if ( $foreignClass ) {
-						foreach ( $value as $foreignKey ) {
-							$foreignKeyField = $fieldInfo[1];
+		} elseif ( $model->hasMethod( MappableInterface::CustomMapMethodPrefix . $modelPath ) ) {
 
-							$related = $foreignClass::get()->Filter( [
-								$foreignKeyField => $foreignKey,
-							] );
-							if ( ! $related && self::testbits( $options, MappableInterface::OptionCreateRelatedModels) ) {
-								$related = new $foreignClass( [
-									$foreignKeyField => $foreignKey,
-								] );
-							}
-							if ( $related ) {
-								$model->$relationshipName()->add( $related );
-							}
-						}
-					} elseif ( $model->hasField( $modelPath ) ) {
+			$this->mapMethod( MappableInterface::CustomMapMethodPrefix . $modelPath, $value, $model, $fieldInfo, $options, $result );
 
-						// we have multiple values but no relationship, just set the value to
-						// imploded values
-						$model->$modelPath = implode( ',', $value );
-					}
-				}
+		} elseif ( is_array( $value ) ) {
+			// map an incoming array to the model
+			$result = $this->mapArray( $value, $model, $fieldInfo, $options );
 
-			} elseif ( ! self::testbits( $options, MappableInterface::OptionShallow ) ) {
-
-				if ( $relatedClass = $model->hasManyComponent( $relationshipName ) ) {
-					// add has_many related objects as new objects
-
-					if ( $this->testbits( $options, MappableInterface::OptionDeleteOneToMany ) ) {
-						/** @var DataObject $related */
-						foreach ( $model->$relationshipName() as $related ) {
-							$related->delete();
-						}
-					}
-					if ( $this->testbits( $options, MappableInterface::OptionClearOneToMany ) ) {
-						// remove related records first
-						$model->$relationshipName()->removeAll();
-					}
-					foreach ( $value as $foreignData ) {
-						// add a new foreign model to this one.
-
-						/** @var DataObject|MappableInterface $foreignModel */
-						$foreignModel = new $relatedClass();
-						$foreignModel->mappableUpdate( $this->sourceName, $foreignData, $options );
-						$foreignModel->write( true );
-
-						$model->$relationshipName()->add( $foreignModel );
-					}
-
-				} elseif ( $relatedClass = $model->manyMany( $relationshipName ) ) {
-
-					// TODO finish of many_many mapping
-				}
-			}
 		} else {
-			// map single value
-			if ( $relationshipName ) {
-				// handle one-to-one relationship with a lookup field (could be the id or another field, e.g a 'Code' field).
-				list( $relationshipName, $lookupFieldName ) = explode( $delimiter, $relationshipName );
+			// map a single value to the model
+			$result = $this->mapSingleValue( $value, $model, $fieldInfo, $options );
+		}
 
-				if ( $relatedClass = $model->hasOne( $relationshipName ) ) {
-					/** @var DataObject $relatedModel */
-					$relatedModel = $relatedClass::get()->filter( $lookupFieldName, $value )->first();
+		return $result;
+	}
 
-					if ( $relatedModel ) {
-						$idField = $relationshipName . 'ID';
+	protected function mapSingleValue( $value, DataObject $model, array $fieldInfo, $options ) {
+		$delimiter = static::path_delimiter();
 
-						$model->{$idField} = $relatedModel->ID;
+		list( , $modelPath, , $isTagField, $method, $relationshipName ) = $fieldInfo;
 
-						// TODO validate this works, as in what if there are more than one?
-						$backRelationships = $relatedModel->hasMany();
-						array_map(
-							function ( $relationshipName, $className ) use ( $model, $relatedModel ) {
-								if ( $className == $model->class ) {
-									$relatedModel->$relationshipName()->add( $model );
-								}
-							},
-							array_keys( $backRelationships ),
-							array_values( $backRelationships )
-						);
+		$mapped = false;
+
+		// map single value
+		if ( $relationshipName ) {
+			// handle one-to-one relationship with a lookup field (could be the id or another field, e.g a 'Code' field).
+			list( $relationshipName, $lookupFieldName ) = explode( $delimiter, $relationshipName );
+
+			if ( $relatedClass = $model->hasOne( $relationshipName ) ) {
+				/** @var DataObject $relatedModel */
+				$relatedModel = $relatedClass::get()->filter( $lookupFieldName, $value )->first();
+
+				if ( $relatedModel ) {
+					$idField = $relationshipName . 'ID';
+
+					$model->{$idField} = $relatedModel->ID;
+
+					// TODO validate this works, as in what if there are more than one?
+					$backRelationships = $relatedModel->hasMany();
+					array_map(
+						function ( $relationshipName, $className ) use ( $model, $relatedModel ) {
+							if ( $className == $model->class ) {
+								$relatedModel->$relationshipName()->add( $model );
+							}
+						},
+						array_keys( $backRelationships ),
+						array_values( $backRelationships )
+					);
+				}
+			}
+		} elseif ( $model->hasField( $modelPath ) ) {
+
+			$model->$modelPath = $value;
+			$mapped            = true;
+		}
+
+		return $mapped;
+	}
+
+	protected function mapArray( array $value, DataObject $model, array $fieldInfo, $options ) {
+		$delimiter = static::path_delimiter();
+
+		$mapped = false;
+
+		list( , $modelPath, , $isTagField, $method, $relationshipName ) = $fieldInfo;
+		// map array to relationships or single field
+		if ( $isTagField && ! self::testbits( $options, MappableInterface::OptionSkipRelationships ) ) {
+			$relationshipName = $modelPath;
+
+			// add foreign keys ('Tags') creating the foreign record if necessary and options say so
+
+			if ( ! $foreignClass = $model->hasManyComponent( $relationshipName, true ) ) {
+				if ( $manyMany = $model->manyManyComponent( $relationshipName, true ) ) {
+					if ( isset( $manyMany[1] ) ) {
+						$foreignClass = $manyMany[1];
 					}
 				}
-			} elseif ( $model->hasMethod( "set$modelPath" ) ) {
+			}
 
-				$model->{"set$modelPath"}( $value );
+			if ( $foreignClass ) {
+				foreach ( $value as $foreignKey ) {
+					$foreignKeyField = $fieldInfo[1];
 
+					$related = $foreignClass::get()->Filter( [
+						$foreignKeyField => $foreignKey,
+					] );
+					if ( ! $related && self::testbits( $options, MappableInterface::OptionCreateRelatedModels ) ) {
+						$related = new $foreignClass( [
+							$foreignKeyField => $foreignKey,
+						] );
+					}
+					if ( $related ) {
+						$model->$relationshipName()->add( $related );
+						$mapped = true;
+					}
+				}
 			} elseif ( $model->hasField( $modelPath ) ) {
+				$model->$modelPath = implode( MappableInterface::DefaultTagDelimiter, $value );
+				$mapped            = true;
+			}
 
-				$model->$modelPath = $value;
+		} elseif ( ! self::testbits( $options, MappableInterface::OptionShallow ) ) {
+
+			if ( $relatedClass = $model->hasManyComponent( $relationshipName ) ) {
+				// add has_many related objects as new objects
+
+				if ( $this->testbits( $options, MappableInterface::OptionDeleteOneToMany ) ) {
+					/** @var DataObject $related */
+					foreach ( $model->$relationshipName() as $related ) {
+						$related->delete();
+					}
+				}
+				if ( $this->testbits( $options, MappableInterface::OptionClearOneToMany ) ) {
+					// remove related records first
+					$model->$relationshipName()->removeAll();
+				}
+				foreach ( $value as $foreignData ) {
+					// add a new foreign model to this one.
+
+					/** @var DataObject|MappableInterface $foreignModel */
+					$foreignModel = new $relatedClass();
+					$foreignModel->mappableUpdate( $this->sourceName, $foreignData, $options );
+					$foreignModel->write( true );
+
+					$model->$relationshipName()->add( $foreignModel );
+					$mapped = true;
+				}
 			}
 		}
+
+		return $mapped;
+	}
+
+	/**
+	 * @param string      $method
+	 * @param mixed       $value
+	 * @param \DataObject $model
+	 * @param array       $fieldInfo
+	 * @param mixed       $options
+	 * @param mixed       $result
+	 *
+	 * @return bool true if method exists (and so was called), false otherwise.
+	 */
+	protected function mapMethod( $method, $value, DataObject $model, array $fieldInfo, $options, &$result ) {
+		if ( $hasMethod = $model->hasMethod( $method ) ) {
+			$result = $model->$method( $value, $fieldInfo );
+		}
+
+		return $hasMethod;
 	}
 
 	protected function notFound( $fieldInfo, $options ) {
