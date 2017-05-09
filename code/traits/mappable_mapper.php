@@ -104,6 +104,7 @@ trait mappable_mapper {
 		}
 
 		if ( is_array( $value ) ) {
+			// map array to relationships or single field
 			if ( $isTagField && ! self::testbits( $options, MappableInterface::OptionSkipRelationships ) ) {
 				$relationshipName = $modelPath;
 
@@ -174,8 +175,9 @@ trait mappable_mapper {
 				}
 			}
 		} else {
-			// handle one-to-one relationship with a lookup field (could be the id or another field, e.g a 'Code' field).
+			// map single value
 			if ( $relationshipName ) {
+				// handle one-to-one relationship with a lookup field (could be the id or another field, e.g a 'Code' field).
 				list( $relationshipName, $lookupFieldName ) = explode( $delimiter, $relationshipName );
 
 				if ( $relatedClass = $model->hasOne( $relationshipName ) ) {
