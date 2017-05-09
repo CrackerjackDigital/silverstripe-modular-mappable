@@ -109,15 +109,20 @@ trait mappable_mapper {
 				$relationshipName = $modelPath;
 
 				// setter should map through to a set<RelationshipName> method on the Quaff extension
-				if ( $model->hasMethod( $setter = "set$relationshipName" ) ) {
+				if ( $model->hasMethod( $setter = "map$relationshipName" ) ) {
 					$model->$setter( $value );
 				} elseif ( $model->hasMethod( $method ) ) {
 					$model->$method( $value );
 				} else {
 					// add foreign keys ('Tags') creating the foreign record if necessary and options say so
 
-					$foreignClass = $model->hasManyComponent( $relationshipName )
-						?: $model->manyManyComponent( $relationshipName );
+					if (!$foreignClass = $model->hasManyComponent( $relationshipName, true )) {
+						if ($manyMany = $model->manyManyComponent( $relationshipName, true )) {
+							if (isset($manyMany[1])) {
+								$foreignClass = $manyMany[1];
+							}
+						}
+					}
 
 					if ( $foreignClass ) {
 						foreach ( $value as $foreignKey ) {
