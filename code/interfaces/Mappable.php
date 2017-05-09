@@ -22,7 +22,8 @@ interface Mappable {
 	const OptionDeleteOneToMany             = 8192;  // delete implies clear so 32 | 16
 	const OptionCreateRelatedModels         = 16384;
 
-	const DefaultMappableOptions = self::DecodeNone | self::MapDeep | self::OptionDeleteOneToMany | self::OptionCreateRelatedModels;
+	// self::DecodeNone | self::MapDeep | self::OptionDeleteOneToMany | self::OptionCreateRelatedModels
+	const DefaultMappableOptions = 24648;
 
 	const DefaultMapMethodPrefix = 'mappable';
 

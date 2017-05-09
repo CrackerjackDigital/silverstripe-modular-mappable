@@ -44,7 +44,7 @@ trait mappable_map_map {
 				// failed to walk the full path, break out
 				break;
 			}
-			$found = $parsed === $pathLength;
+			$found = ($parsed === $pathLength);
 		}
 
 		return $found ? $data : null;
