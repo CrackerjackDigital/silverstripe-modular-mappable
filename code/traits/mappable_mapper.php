@@ -160,8 +160,6 @@ trait mappable_mapper {
 	}
 
 	protected function mapArray( array $value, DataObject $model, array $fieldInfo, $options ) {
-		$delimiter = static::path_delimiter();
-
 		$mapped = false;
 
 		list( , $modelPath, , $isTagField, $method, $relationshipName ) = $fieldInfo;
