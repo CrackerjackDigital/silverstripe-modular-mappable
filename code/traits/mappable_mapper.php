@@ -25,12 +25,12 @@ trait mappable_mapper {
 
 	/**
 	 * @param string $path  delimited path in data to traverse, e.g. 'item.contents.chunks[1]'
-	 * @param array  $data
+	 * @param mixed  $data e.g. array from json or DOMNode/DOMDocument for XML
 	 * @param bool   $found set to true path was found in data, otherwise false
 	 *za
 	 * @return
 	 */
-	abstract public function traverse( $path, array $data, &$found = false );
+	abstract public function traverse( $path, $data, &$found = false );
 
 	/**
 	 * Given data in a nested array, a field map to a flat structure and a DataObject to set field values
