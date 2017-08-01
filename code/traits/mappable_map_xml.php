@@ -1,23 +1,26 @@
 <?php
+
 namespace Modular\Traits;
 
+use DOMNode;
 use Modular\Interfaces\Mappable;
 
-trait mappable_map_map {
+trait mappable_map_xml {
 	public static function path_delimiter() {
-		return static::config()->get('path_delimiter') ?: Mappable::DefaultPathDelimiter;
+		return static::config()->get( 'path_delimiter' ) ?: Mappable::DefaultPathDelimiter;
 	}
+
 	/**
 	 * Traverse the array data with a path like 'item.summary.title' in $data and return the value found at the end, if
 	 * any.
 	 *
-	 * @param string $path
-	 * @param array  $data
-	 * @param bool   $found - set to true if found, false otherwise
+	 * @param string  $path
+	 * @param DOMNode $data
+	 * @param bool    $found - set to true if found, false otherwise
 	 *
 	 * @return array|null|string
 	 */
-	public function traverse( $path, array $data, &$found = false ) {
+	public function traverse( $path, $data, &$found = false ) {
 		$found = false;
 
 		$segments = explode( static::path_delimiter(), $path );
@@ -44,7 +47,7 @@ trait mappable_map_map {
 				// failed to walk the full path, break out
 				break;
 			}
-			$found = ($parsed === $pathLength);
+			$found = ( $parsed === $pathLength );
 		}
 
 		return $found ? $data : null;
