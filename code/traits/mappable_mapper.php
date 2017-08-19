@@ -44,7 +44,7 @@ trait mappable_mapper {
 	 * @throws \ValidationException
 	 * @throws null
 	 */
-	public function mappableUpdate( $sourceName, array $data, $options = MappableInterface::DefaultMappableOptions ) {
+	public function mappableUpdate( $sourceName, $data, $options = MappableInterface::DefaultMappableOptions ) {
 		$model = $this->model();
 
 		if ( ! $map = $model->mappableMapForSource( $sourceName ) ) {
