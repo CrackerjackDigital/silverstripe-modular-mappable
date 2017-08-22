@@ -33,6 +33,12 @@ trait mappable_mapper {
 	abstract public function traverse( $path, $data, &$found = false );
 
 	/**
+	 * return a path delimiter, e.g. '.', TODO decouple this from here as could be non-delimited source map e.g. xpath
+	 * @return mixed
+	 */
+	abstract public function mappableSourcePathDelimiter();
+
+	/**
 	 * Given data in a nested array, a field map to a flat structure and a DataObject to set field values
 	 * on populate the model.
 	 *
@@ -117,7 +123,7 @@ trait mappable_mapper {
 	}
 
 	protected function mapSingleValue( $value, DataObject $model, array $fieldInfo, $options ) {
-		$delimiter = static::path_delimiter();
+		$delimiter = $this->mappableSourcePathDelimiter();
 
 		list( , $modelPath, , $isTagField, $method, $relationshipName ) = $fieldInfo;
 

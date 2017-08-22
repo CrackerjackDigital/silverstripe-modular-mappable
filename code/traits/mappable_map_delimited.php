@@ -3,11 +3,10 @@
 namespace Modular\Traits;
 
 use DOMNode;
-use Modular\Interfaces\Mappable;
 
-trait mappable_map_xml {
-	public static function path_delimiter() {
-		return static::config()->get( 'path_delimiter' ) ?: Mappable::DefaultPathDelimiter;
+trait mappable_map_delimited {
+	public function mappableSourcePathDelimiter() {
+		return '.';
 	}
 
 	/**
@@ -23,7 +22,7 @@ trait mappable_map_xml {
 	public function traverse( $path, $data, &$found = false ) {
 		$found = false;
 
-		$segments = explode( static::path_delimiter(), $path );
+		$segments = explode( $this->mappableSourcePathDelimiter(), $path );
 
 		$pathLength = count( $segments );
 		$parsed     = 0;

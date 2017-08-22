@@ -12,6 +12,12 @@ trait mappable_model {
 	abstract public function model();
 
 	/**
+	 * Return the delimiter in source path, e.g. '.'
+	 * @return mixed
+	 */
+	abstract public function mappableSourcePathDelimiter();
+
+	/**
 	 * @param string $sourceName names of the source to lookup in config.mappable_map of the model
 	 * @param int    $options
 	 *
@@ -26,9 +32,10 @@ trait mappable_model {
 		if ( ! isset( $maps[ $sourceName ] ) ) {
 			throw new Exception( "No map for endpoint '$sourceName'" );
 		}
+		$delimiter = $this->mappableSourcePathDelimiter();
 
 		foreach ( $maps[ $sourceName ] as $dataPath => $modelPath ) {
-			$fieldInfo            = self::decode_map( $dataPath, $modelPath );
+			$fieldInfo            = self::decode_map( $dataPath, $modelPath, $delimiter);
 			$newMap[ $modelPath ] = $fieldInfo;
 		}
 
@@ -43,12 +50,12 @@ trait mappable_model {
 	 * @param string $dataPath  in incoming data, e.g. a dot path on the left of a quaff_map configuration map
 	 * @param string $modelPath in SilverStripe e.g a field name on the right of a quaff_map
 	 *
+	 * @param string $delimiter
+	 *
 	 * @return array see comments on return array
 	 */
-	public static function decode_map( $dataPath, $modelPath ) {
+	public static function decode_map( $dataPath, $modelPath, $delimiter = '.' ) {
 		$foreignKey = $tagField = $method = $relationship = null;
-
-		$delimiter = self::path_delimiter();
 
 		if ( false !== strpos( $modelPath, '.' ) ) {
 			// model path is a relationship which should be resolved by the mapper
