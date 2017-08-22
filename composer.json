@@ -35,5 +35,8 @@
 	"extra": {
 		"installer-name": "modular-mappable"
 	},
+	"autoload": {
+		"files": [ "autoloader.php" ]
+	},
 	"minimum-stability": "dev"
 }
