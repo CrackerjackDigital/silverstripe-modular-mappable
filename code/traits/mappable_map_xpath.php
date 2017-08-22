@@ -2,7 +2,7 @@
 
 namespace Modular\Traits;
 
-trait mappable_map_xml {
+trait mappable_map_xpath {
 	/**
 	 * Traverse the xml data with a path like '/item/summary/title' in $data and return the value found at the end, if
 	 * any.

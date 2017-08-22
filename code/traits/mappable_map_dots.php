@@ -4,7 +4,7 @@ namespace Modular\Traits;
 
 use DOMNode;
 
-trait mappable_map_delimited {
+trait mappable_map_dots {
 	public function mappableSourcePathDelimiter() {
 		return '.';
 	}
