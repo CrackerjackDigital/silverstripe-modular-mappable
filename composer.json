@@ -19,8 +19,8 @@
 	],
 	"require": {
 		"silverstripe/framework": ">=3.1",
-		"crackerjackdigital/silverstripe-modular": "*",
-		"crackerjackdigital/silverstripe-modular-types": "*"
+		"crackerjackdigital/silverstripe-modular": "self.version",
+		"crackerjackdigital/silverstripe-modular-types": "self.version"
 	},
 	"repositories": [
 		{
